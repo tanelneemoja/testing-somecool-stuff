@@ -1,7 +1,19 @@
 name: Generate Ad in Repo
-on:
-  workflow_dispatch: # The manual "Start" button
 
+on:
+  # 1. Manual Trigger (Keep this for quick, controlled testing)
+  workflow_dispatch: 
+  
+  # 2. Automated Trigger (Runs when specific files are pushed to the main branch)
+  push:
+    branches:
+      - main # Or your default branch name (e.g., master)
+    paths:
+      - 'generate.py'
+      - 'assets/**'
+      - '.github/workflows/make_ad.yml'
+      # Ignore the output directory so the Action's own commit doesn't trigger itself
+      - '!generated_ads/**'
 # Give the robot permission to write files back to your repo
 permissions:
   contents: write
