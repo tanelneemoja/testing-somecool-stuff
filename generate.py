@@ -19,7 +19,7 @@ NAMESPACES = {
 # 1.2. Figma Design Layout & Image Fitting
 # These coordinates are adjusted based on your latest feedback.
 LAYOUT_CONFIG = {
-    "canvas_size": (1080, 1080), 
+    "canvas_size": (1200, 1200), 
     "template_path": "assets/ballzy_template.png", # Ensure this file is uploaded!
     "slots": [
         # Slot 1: Top Left - Adjusted up and larger
