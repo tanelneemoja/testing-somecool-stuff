@@ -9,7 +9,7 @@ from PIL import Image, ImageOps, ImageDraw, ImageFont
 # 1.1. XML Feed Source
 FEED_URL = "https://backend.ballzy.eu/et/amfeed/feed/download?id=102&file=cropink_et.xml"
 OUTPUT_DIR = "generated_ads" 
-MAX_PRODUCTS_TO_GENERATE = 3 # SET TO 3 FOR FINAL TEST! Change this to a high number (e.g., 9999) for production.
+MAX_PRODUCTS_TO_GENERATE = 6 # SET TO 3 FOR FINAL TEST! Change this to a high number (e.g., 9999) for production.
 
 # XML Namespaces (required for parsing Google Shopping/Meta Feed XML)
 NAMESPACES = {
@@ -26,10 +26,10 @@ LAYOUT_CONFIG = {
         {"x": 50, "y": 90, "w": 550, "h": 550, "center_y": 0.5}, 
         
         # Slot 2: Middle Right - Adjusted right and larger
-        {"x": 610, "y": 400, "w": 500, "h": 400, "center_y": 0.6}, 
+        {"x": 630, "y": 400, "w": 500, "h": 400, "center_y": 0.6}, 
         
         # Slot 3: Bottom Left - Adjusted lower and left
-        {"x": 35, "y": 900, "w": 550, "h": 280, "center_y": 0.8}
+        {"x": 35, "y": 880, "w": 550, "h": 280, "center_y": 0.8}
     ],
     "price": {
         "x": 920,   # Adjusted right
