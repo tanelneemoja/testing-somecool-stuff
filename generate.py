@@ -29,7 +29,7 @@ LAYOUT_CONFIG = {
         {"x": 670, "y": 400, "w": 500, "h": 400, "center_y": 0.6}, 
         
         # Slot 3: Bottom Left - Adjusted lower and left
-        {"x": 50, "y": 880, "w": 550, "h": 280, "center_y": 0.8}
+        {"x": 50, "y": 880, "w": 550, "h": 280, "center_y": 0.6}
     ],
     "price": {
         "x": 920,   # Adjusted right
@@ -103,9 +103,10 @@ def create_ballzy_ad(image_urls, price_text, product_id):
 # --- 3. XML FEED PROCESSING LOGIC ---
 
 def process_feed(url):
-    """Downloads the XML feed and iterates through products."""
+    """Downloads the XML feed, filters products, and iterates through generation."""
     
     print(f"Downloading feed from: {url}")
+    # ... (code for downloading feed remains the same) ...
     try:
         feed_response = requests.get(url, timeout=30)
         feed_response.raise_for_status()
@@ -119,6 +120,9 @@ def process_feed(url):
         print(f"FATAL ERROR: Could not parse XML feed. {e}")
         return
 
+    # Create output directory if it doesn't exist
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    
     product_count = 0
     
     for item in root.iter('item'): 
@@ -130,7 +134,34 @@ def process_feed(url):
         if product_id_element is None: continue
         product_id = product_id_element.text.strip()
         
-        # --- Price Extraction and Formatting (FINALIZED) ---
+        # -------------------------------------------------------------------
+        # 🟢 PRODUCT FILTERING LOGIC (NEW)
+        # -------------------------------------------------------------------
+        
+        # 1. Check Google Product Category (must contain "Street Shoes" OR "Boots")
+        category_element = item.find('g:google_product_category', NAMESPACES)
+        is_correct_category = False
+        if category_element is not None:
+            category_text = category_element.text.strip().lower()
+            if "street shoes" in category_text or "boots" in category_text:
+                is_correct_category = True
+        
+        # 2. Check Custom Label 0 (must exactly equal "Lifestyle")
+        label_element = item.find('g:custom_label_0', NAMESPACES)
+        is_lifestyle = False
+        if label_element is not None and label_element.text.strip() == "Lifestyle":
+            is_lifestyle = True
+            
+        # If either condition is FALSE, skip this product
+        if not is_correct_category or not is_lifestyle:
+            # print(f"Skipping product {product_id}: Failed category/label filter.")
+            continue 
+            
+        # -------------------------------------------------------------------
+        # 3. Proceed with Price Extraction and Image Link Extraction
+        # -------------------------------------------------------------------
+        
+        # (Price extraction logic remains the same)
         price_element = item.find('g:sale_price', NAMESPACES)
         if price_element is None:
             price_element = item.find('g:price', NAMESPACES)
@@ -141,7 +172,6 @@ def process_feed(url):
         
         try:
             price_value = float(raw_price_str)
-            # Format: Strip .00 if integer, keep decimals otherwise, and append €
             if price_value == int(price_value):
                 formatted_price = f"{int(price_value)}€" 
             else:
@@ -150,7 +180,7 @@ def process_feed(url):
         except ValueError:
             formatted_price = raw_price_str.replace(" EUR", "€")
 
-        # --- Image Link Extraction ---
+        # (Image Link Extraction logic remains the same)
         image_urls = []
         main_image = item.find('g:image_link', NAMESPACES)
         if main_image is not None:
@@ -165,7 +195,6 @@ def process_feed(url):
         # Generate Image
         create_ballzy_ad(image_urls, formatted_price, product_id)
         product_count += 1
-
 # --- 4. EXECUTION ---
 
 if __name__ == "__main__":
