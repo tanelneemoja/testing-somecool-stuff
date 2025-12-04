@@ -29,10 +29,10 @@ LAYOUT_CONFIG = {
         {"x": 700, "y": 430, "w": 480, "h": 380, "center_y": 0.6}, 
         
         # Slot 3: Bottom Left - Adjusted lower and left
-        {"x": 20, "y": 800, "w": 620, "h": 280, "center_y": 0.8}
+        {"x": 20, "y": 900, "w": 620, "h": 280, "center_y": 0.8}
     ],
     "price": {
-        "x": 890,   # Adjusted right
+        "x": 920,   # Adjusted right
         "y": 1050,   # Adjusted lower
         "color": "#0055FF", 
         "font_size": 80,
