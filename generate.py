@@ -17,7 +17,7 @@ NAMESPACES = {
 }
 # Define color constants (you can adjust these hex codes)
 NORMAL_PRICE_COLOR = "#0055FF" # Original Ballzy blue
-SALE_PRICE_COLOR = "#800080"   # A standard purple color  
+SALE_PRICE_COLOR = "#cc05d1"   # A standard purple color  
 # 1.2. Figma Design Layout & Image Fitting
 # These coordinates are adjusted based on your latest feedback.
 LAYOUT_CONFIG = {
@@ -28,7 +28,7 @@ LAYOUT_CONFIG = {
         {"x": 25, "y": 30, "w": 606, "h": 700, "center_y": 0.5}, 
         
         # Slot 2: Middle Right - Adjusted right and larger
-        {"x": 660, "y": 303, "w": 520, "h": 625, "center_y": 0.6}, 
+        {"x": 663, "y": 303, "w": 520, "h": 625, "center_y": 0.6}, 
         
         # Slot 3: Bottom Left - Adjusted lower and left
         {"x": 25, "y": 823, "w": 606, "h": 350, "center_y": 0.5}
