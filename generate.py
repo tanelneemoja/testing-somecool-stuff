@@ -43,7 +43,7 @@ LAYOUT_CONFIG = {
 
 # --- 2. IMAGE GENERATION LOGIC ---
 
-def create_ballzy_ad(image_urls, price_text, product_id):
+def create_ballzy_ad(image_urls, price_text, product_id, price_color):
     """Generates the single stylized image based on the Ballzy layout."""
     
     # 1. Load Background Template
@@ -74,7 +74,7 @@ def create_ballzy_ad(image_urls, price_text, product_id):
                 centering=(0.5, slot.get("center_y", 0.5))
             )
             
-            # Paste image (it's already the exact size of the slot)
+            # Paste image 
             base.paste(fitted_img, (slot['x'], slot['y']), fitted_img)
 
         except Exception as e:
@@ -89,19 +89,18 @@ def create_ballzy_ad(image_urls, price_text, product_id):
     except:
         font = ImageFont.load_default() 
 
-    # Calculate text size and position (remains the same)
+    # Calculate text size and position 
     _, _, w, h = draw.textbbox((0, 0), price_text, font=font)
     text_x = price_conf["x"] - (w / 2)
     text_y = price_conf["y"] - (h / 2)
     
-    # Use the passed price_color here
-    draw.text((text_x, text_y), price_text, fill=price_color, font=font)
+    draw.text((text_x, text_y), price_text, fill=price_color, font=font) # Uses the dynamic color
 
     # 4. Save Final Ad
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     output_path = os.path.join(OUTPUT_DIR, f"ad_{product_id}.jpg")
     base.convert("RGB").save(output_path, format="JPEG", quality=95)
-    print(f"-> Successfully generated: {output_path} (Price: {price_text})")
+    print(f"-> Successfully generated: {output_path} (Price: {price_text}, Color: {price_color})")
 
 # --- 3. XML FEED PROCESSING LOGIC ---
 
@@ -109,7 +108,6 @@ def process_feed(url):
     """Downloads the XML feed, filters products, and iterates through generation."""
     
     print(f"Downloading feed from: {url}")
-    # ... (code for downloading feed remains the same) ...
     try:
         feed_response = requests.get(url, timeout=30)
         feed_response.raise_for_status()
@@ -123,7 +121,6 @@ def process_feed(url):
         print(f"FATAL ERROR: Could not parse XML feed. {e}")
         return
 
-    # Create output directory if it doesn't exist
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     
     product_count = 0
@@ -137,11 +134,7 @@ def process_feed(url):
         if product_id_element is None: continue
         product_id = product_id_element.text.strip()
         
-        # -------------------------------------------------------------------
-        # 🟢 PRODUCT FILTERING LOGIC (NEW)
-        # -------------------------------------------------------------------
-        
-        # 1. Check Google Product Category (must contain "Street Shoes" OR "Boots")
+        # --- PRODUCT FILTERING LOGIC ---
         category_element = item.find('g:google_product_category', NAMESPACES)
         is_correct_category = False
         if category_element is not None:
@@ -149,28 +142,31 @@ def process_feed(url):
             if "street shoes" in category_text or "boots" in category_text:
                 is_correct_category = True
         
-        # 2. Check Custom Label 0 (must exactly equal "Lifestyle")
         label_element = item.find('custom_label_0', NAMESPACES)
         is_lifestyle = False
         if label_element is not None and label_element.text.strip() == "Lifestyle":
             is_lifestyle = True
             
-        # If either condition is FALSE, skip this product
         if not is_correct_category or not is_lifestyle:
-            # print(f"Skipping product {product_id}: Failed category/label filter.")
             continue 
             
-        # -------------------------------------------------------------------
-        # 3. Proceed with Price Extraction and Image Link Extraction
-        # -------------------------------------------------------------------
+        # --- Price Extraction and Coloring (FINALIZED) ---
         
-        # (Price extraction logic remains the same)
-        price_element = item.find('g:sale_price', NAMESPACES)
-        if price_element is None:
+        sale_price_element = item.find('g:sale_price', NAMESPACES)
+        
+        if sale_price_element is not None:
+            # SALE PRICE FOUND: Use sale price and PURPLE color
+            price_element = sale_price_element
+            final_price_color = SALE_PRICE_COLOR
+        else:
+            # NO SALE PRICE: Use regular price and BLUE color
             price_element = item.find('g:price', NAMESPACES)
+            final_price_color = NORMAL_PRICE_COLOR
+
 
         if price_element is None: continue
             
+        # Price Formatting: Strip .00 if integer, keep decimals otherwise, and append €
         raw_price_str = price_element.text.split()[0]
         
         try:
@@ -183,7 +179,7 @@ def process_feed(url):
         except ValueError:
             formatted_price = raw_price_str.replace(" EUR", "€")
 
-        # (Image Link Extraction logic remains the same)
+        # --- Image Link Extraction ---
         image_urls = []
         main_image = item.find('g:image_link', NAMESPACES)
         if main_image is not None:
@@ -195,9 +191,10 @@ def process_feed(url):
 
         if not image_urls: continue
         
-        # Generate Image
-        create_ballzy_ad(image_urls, formatted_price, product_id)
+        # Generate Image (passing the final_price_color)
+        create_ballzy_ad(image_urls, formatted_price, product_id, final_price_color)
         product_count += 1
+
 # --- 4. EXECUTION ---
 
 if __name__ == "__main__":
