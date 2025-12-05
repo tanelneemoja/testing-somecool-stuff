@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 from io import BytesIO
 from PIL import Image, ImageOps, ImageDraw, ImageFont
 import csv
+import re
+import html
 # --- 1. CONFIGURATION ---
  
 # 1.1. XML Feed Source
@@ -48,7 +50,22 @@ LAYOUT_CONFIG = {
         "rect_y1": 1175, # Ending Y (Bottom edge of canvas/price area)
     }
 }
-
+def clean_text(text):
+    """Removes HTML tags and decodes HTML entities (like &hellip;) from a string."""
+    if not text:
+        return ""
+    
+    # 1. Decode HTML entities (e.g., &hellip; -> ...)
+    text = html.unescape(text)
+    
+    # 2. Strip HTML/XML tags (e.g., <html>, <body>, <p>, <br/>)
+    # This pattern matches anything between < and >
+    clean = re.sub('<[^>]*>', '', text)
+    
+    # 3. Clean up the specific extra text observed in your example
+    clean = clean.replace('Vaata lähemalt ballzy.eu.', '').strip()
+    
+    return clean
 # --- 2. IMAGE GENERATION LOGIC (FINALIZED) ---
 
 def create_ballzy_ad(image_urls, price_text, product_id, price_color):
@@ -282,7 +299,7 @@ def process_feed(url):
 
         formatted_display_price = format_price(display_price_element)
         
-        # --- 🟢 FIX: Image Link Extraction (Re-integrated) ---
+        # --- Image Link Extraction ---
         image_urls = []
         main_image = item.find('g:image_link', NAMESPACES)
         if main_image is not None:
@@ -301,6 +318,11 @@ def process_feed(url):
             # Normalize tag names for dictionary keys (remove namespace prefix)
             tag_name = node.tag.split('}')[-1]
             item_elements[tag_name] = node
+            
+            # 🟢 APPLY CLEANING directly to the node's text for XML/CSV
+            if tag_name in ['description', 'title', 'link']:
+                node.text = clean_text(node.text)
+
 
         # Store all original nodes and critical data for the final feeds
         products_for_feed.append({
@@ -312,7 +334,7 @@ def process_feed(url):
             'nodes': list(item) # List of original nodes for XML copy
         })
 
-        # Generate Image (This call is now safe as image_urls is defined)
+        # Generate Image (This call is now safe)
         create_ballzy_ad(image_urls, formatted_display_price, product_id, final_price_color)
         product_count += 1
 
