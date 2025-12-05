@@ -46,7 +46,7 @@ LAYOUT_CONFIG = {
     }
 }
 
-# --- 2. IMAGE GENERATION LOGIC ---
+# --- 2. IMAGE GENERATION LOGIC (FINALIZED) ---
 
 def create_ballzy_ad(image_urls, price_text, product_id, price_color):
     """Generates the single stylized image based on the Ballzy layout."""
@@ -58,7 +58,7 @@ def create_ballzy_ad(image_urls, price_text, product_id, price_color):
         print(f"ERROR: Template not found. Creating white canvas.")
         base = Image.new('RGBA', LAYOUT_CONFIG["canvas_size"], (255, 255, 255, 255))
         
-    # 2. Loop through the 3 Image Slots
+    # 2. Loop through the 3 Image Slots (Image fitting logic remains the same)
     for i, slot in enumerate(LAYOUT_CONFIG["slots"]):
         if i >= len(image_urls): 
             continue
@@ -68,34 +68,33 @@ def create_ballzy_ad(image_urls, price_text, product_id, price_color):
         try:
             response = requests.get(url, timeout=10)
             img = Image.open(BytesIO(response.content)).convert("RGBA")
-            
             target_size = (slot['w'], slot['h'])
-            
-            # IMPROVED FITTING: ImageOps.fit (Cover method) with dynamic centering
             fitted_img = ImageOps.fit(
                 img, 
                 target_size, 
                 method=Image.Resampling.LANCZOS, 
                 centering=(0.5, slot.get("center_y", 0.5))
             )
-            
-            # Paste image 
             base.paste(fitted_img, (slot['x'], slot['y']), fitted_img)
-
         except Exception as e:
             print(f"Error processing image {url} for product {product_id}: {e}")
 
-   # 3. Draw the Price
+    # 3. Draw the Price
     draw = ImageDraw.Draw(base)
     price_conf = LAYOUT_CONFIG["price"]
     
-    # 🟢 NEW: Draw the Colored Rectangle Background
+    # 🟢 DRAW THE COLORED BORDER (Outline)
     rect_coords = [
         (price_conf["rect_x0"], price_conf["rect_y0"]),
         (price_conf["rect_x1"], price_conf["rect_y1"])
     ]
-    # The 'price_color' is used as the fill color!
-    draw.rectangle(rect_coords, fill=price_color) 
+    # Draws an unfilled rectangle (border only) using the dynamic price_color
+    draw.rectangle(
+        rect_coords, 
+        fill=None,
+        outline=price_color, 
+        width=5 # Border thickness
+    ) 
     
     # Load Font
     try:
@@ -103,14 +102,13 @@ def create_ballzy_ad(image_urls, price_text, product_id, price_color):
     except:
         font = ImageFont.load_default() 
 
-    # Calculate text size and position (remains the same)
+    # Calculate text size and position
     _, _, w, h = draw.textbbox((0, 0), price_text, font=font)
     text_x = price_conf["x"] - (w / 2)
     text_y = price_conf["y"] - (h / 2)
     
-    # Draw the price text *over* the new rectangle.
-    # We will draw the text in WHITE for high contrast over blue/purple.
-    draw.text((text_x, text_y), price_text, fill="white", font=font)
+    # 🔴 FINAL FIX: Draw the price text using the dynamic price_color
+    draw.text((text_x, text_y), price_text, fill=price_color, font=font) 
 
     # 4. Save Final Ad
     os.makedirs(OUTPUT_DIR, exist_ok=True)
