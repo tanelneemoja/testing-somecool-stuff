@@ -41,9 +41,14 @@ jobs:
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "actions@github.com"
           
-          # Add the output folder and the new XML feed file
+          # Add the output folder 
           git add generated_ads 
-          git add ballzy_ad_feed.xml
+          
+          # Add the XML feed file
+          git add ballzy_ad_feed.xml || true
+          
+          # 🟢 NEW: Add the Google CSV feed file
+          git add ballzy_google_feed.csv || true
           
           # Commit only if there are changes
           git commit -m "Automated ad generation and feed update" || echo "No new files to commit"
