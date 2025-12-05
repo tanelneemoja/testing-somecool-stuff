@@ -20,7 +20,7 @@ NAMESPACES = {
 }
 # Define color constants (you can adjust these hex codes)
 NORMAL_PRICE_COLOR = "#0055FF" # Original Ballzy blue
-SALE_PRICE_COLOR = "#cc05d1"   # A standard purple color  
+SALE_PRICE_COLOR = "#cc02d2"   # A standard purple color  
 # 1.2. Figma Design Layout & Image Fitting
 # These coordinates are adjusted based on your latest feedback.
 LAYOUT_CONFIG = {
