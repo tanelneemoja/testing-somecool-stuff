@@ -15,7 +15,9 @@ MAX_PRODUCTS_TO_GENERATE = 9 # SET TO 3 FOR FINAL TEST! Change this to a high nu
 NAMESPACES = {
     'g': 'http://base.google.com/ns/1.0'
 }
-  
+# Define color constants (you can adjust these hex codes)
+NORMAL_PRICE_COLOR = "#0055FF" # Original Ballzy blue
+SALE_PRICE_COLOR = "#800080"   # A standard purple color  
 # 1.2. Figma Design Layout & Image Fitting
 # These coordinates are adjusted based on your latest feedback.
 LAYOUT_CONFIG = {
@@ -34,9 +36,8 @@ LAYOUT_CONFIG = {
     "price": {
         "x": 920,   # Adjusted right
         "y": 1050,   # Adjusted lower
-        "color": "#0055FF", 
         "font_size": 80,
-        "font_path": "assets/fonts/BallzyFont-Bold.ttf" # Ensure this file is uploaded!
+        "font_path": "assets/fonts/BallzyFont-Bold.ttf"
     }
 }
 
@@ -88,11 +89,13 @@ def create_ballzy_ad(image_urls, price_text, product_id):
     except:
         font = ImageFont.load_default() 
 
+    # Calculate text size and position (remains the same)
     _, _, w, h = draw.textbbox((0, 0), price_text, font=font)
     text_x = price_conf["x"] - (w / 2)
     text_y = price_conf["y"] - (h / 2)
     
-    draw.text((text_x, text_y), price_text, fill=price_conf["color"], font=font)
+    # Use the passed price_color here
+    draw.text((text_x, text_y), price_text, fill=price_color, font=font)
 
     # 4. Save Final Ad
     os.makedirs(OUTPUT_DIR, exist_ok=True)
