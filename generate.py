@@ -9,7 +9,7 @@ from PIL import Image, ImageOps, ImageDraw, ImageFont
 # 1.1. XML Feed Source
 FEED_URL = "https://backend.ballzy.eu/et/amfeed/feed/download?id=102&file=cropink_et.xml"
 OUTPUT_DIR = "generated_ads" 
-MAX_PRODUCTS_TO_GENERATE = 9 # SET TO 3 FOR FINAL TEST! Change this to a high number (e.g., 9999) for production.
+MAX_PRODUCTS_TO_GENERATE = 15 # SET TO 3 FOR FINAL TEST! Change this to a high number (e.g., 9999) for production.
 
 # XML Namespaces (required for parsing Google Shopping/Meta Feed XML)
 NAMESPACES = {
