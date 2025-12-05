@@ -42,7 +42,7 @@ LAYOUT_CONFIG = {
         "rect_x0": 656,  # Starting X (left edge of Slot 2)
         "rect_y0": 950,  # Starting Y (Adjusted for position below Slot 2)
         "rect_x1": 1178, # Ending X (656 + 522 = 1178, right edge of Slot 2)
-        "rect_y1": 1170, # Ending Y (Bottom edge of canvas/price area)
+        "rect_y1": 1175, # Ending Y (Bottom edge of canvas/price area)
     }
 }
 
