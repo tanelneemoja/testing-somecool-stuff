@@ -109,6 +109,7 @@ def generate_meta_feed(processed_products):
     """Creates the final XML feed using the generated image URLs."""
     print(f"\nCreating final Meta Feed: {META_FEED_FILENAME}")
     
+    # 1. Setup Root and Channel
     ET.register_namespace('', 'http://www.w3.org/2005/Atom')
     ET.register_namespace('g', 'http://base.google.com/ns/1.0')
     rss = ET.Element('rss', version="2.0")
@@ -120,26 +121,27 @@ def generate_meta_feed(processed_products):
     for product_data in processed_products:
         item = ET.SubElement(channel, 'item')
         
-        # 1. Set the new image link using the public URL
-        new_image_link = f"{GITHUB_PAGES_BASE_URL}/ad_{product_data['id']}.jpg"
-        
-        # 2. Re-add all original nodes (except the old image link)
+        # 2. Append all original nodes, excluding the old image link
         for node in product_data['nodes']:
+            # Check the full tag name with namespace
             if node.tag == '{http://base.google.com/ns/1.0}image_link':
                 continue 
+            
+            # Append the node
             item.append(node)
 
         # 3. Add the new image link node
+        new_image_link = f"{GITHUB_PAGES_BASE_URL}/ad_{product_data['id']}.jpg"
         ET.SubElement(item, '{http://base.google.com/ns/1.0}image_link').text = new_image_link
         
-        # 4. Add custom label for tracking (optional, but good practice)
-        ET.SubElement(item, '{http://base.google.com/ns/1.0}custom_label_4').text = product_data['price_state'] # e.g., 'sale' or 'normal'
+        # 4. REMOVED: The problematic line adding <g:custom_label_4> is removed
+        # (The original <custom_label_4> will be retained from the copied nodes)
     
-    # Save the resulting XML tree to a file
+    # 5. Save the resulting XML tree to a file
     tree = ET.ElementTree(rss)
-    ET.ElementTree(tree.getroot()).write(META_FEED_FILENAME, encoding='utf-8', xml_declaration=True)
+    tree.write(META_FEED_FILENAME, encoding='utf-8', xml_declaration=True)
+    
     print(f"Feed saved successfully: {META_FEED_FILENAME}")
-
 
 def process_feed(url):
     """Downloads the XML feed, filters products, generates images, and stores data."""
