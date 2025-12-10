@@ -364,10 +364,26 @@ def process_single_feed(country_code, config):
         product_id = product_id_element.text.strip()
         
         # --- PRODUCT FILTERING LOGIC ---
-        category_element = item.find('g:google_product_category', NAMESPACES)
         is_correct_category = False
-        if category_element is not None:
+        category_element = None
+        
+        # 1. Try to find the specific Google tag (g:google_product_category)
+        if category_element is None:
+             category_element = item.find('g:google_product_category', NAMESPACES)
+
+        # 2. Try to find the general Google category tag (g:category) (THE LV/LT/FI FIX!)
+        if category_element is None:
+             category_element = item.find('g:category', NAMESPACES)
+
+        # 3. Try to find the un-prefixed specific tag (for max compatibility)
+        if category_element is None:
+             category_element = item.find('google_product_category', NAMESPACES)
+             
+        # Now, proceed with filtering if any category element was found
+        if category_element is not None and category_element.text is not None:
             category_text = category_element.text.strip().lower()
+            
+            # Check for English terms
             if "street shoes" in category_text or "boots" in category_text:
                 is_correct_category = True
         
