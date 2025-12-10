@@ -8,16 +8,47 @@ import re
 import html
 # --- 1. CONFIGURATION ---
  
-# 1.1. XML Feed Source
-FEED_URL = "https://backend.ballzy.eu/et/amfeed/feed/download?id=102&file=cropink_et.xml"
+# 1.1. Feed Sources, Constants, and Country Configurations
 OUTPUT_DIR = "generated_ads" 
-MAX_PRODUCTS_TO_GENERATE = 15 # SET TO 3 FOR FINAL TEST! Change this to a high number (e.g., 9999) for production.
-# 🟢 IMPORTANT: REPLACE WITH YOUR VERIFIED PUBLIC URL
+MAX_PRODUCTS_TO_GENERATE = 50 
+
+# 🟢 IMPORTANT: Centralized configuration for all countries
+COUNTRY_CONFIGS = {
+    "EE": {
+        # Assuming EE URL remains the same
+        "feed_url": "https://backend.ballzy.eu/et/amfeed/feed/download?id=102&file=cropink_et.xml",
+        "currency": "EUR",
+        "google_feed_required": True,
+        "language_code": "et"
+    },
+    "LV": {
+        # 🟢 UPDATED LV URL
+        "feed_url": "https://backend.ballzy.eu/lv/amfeed/feed/download?id=104&file=cropink_lv.xml",
+        "currency": "EUR",
+        "google_feed_required": True,
+        "language_code": "lv"
+    },
+    "LT": {
+        # 🟢 UPDATED LT URL
+        "feed_url": "https://backend.ballzy.eu/lt/amfeed/feed/download?id=105&file=cropink_lt.xml",
+        "currency": "EUR",
+        "google_feed_required": True,
+        "language_code": "lt"
+    },
+    "FI": {
+        # 🟢 UPDATED FI URL
+        "feed_url": "https://backend.ballzy.eu/fi/amfeed/feed/download?id=103&file=cropink_fi.xml",
+        "currency": "EUR",
+        "google_feed_required": False, # Google feed is still skipped for FI
+        "language_code": "fi"
+    }
+}
+
+
+# Public Hosting Configuration
 GITHUB_PAGES_BASE_URL = "https://tanelneemoja.github.io/testing-somecool-stuff/generated_ads" 
-META_FEED_FILENAME = "ballzy_ad_feed.xml"
-GOOGLE_FEED_FILENAME = "ballzy_google_feed.csv"
-TIKTOK_FEED_FILENAME = "ballzy_tiktok_feed.xml"
-# XML Namespaces (required for parsing Google Shopping/Meta Feed XML)
+
+# XML Namespaces
 NAMESPACES = {
     'g': 'http://base.google.com/ns/1.0'
 }
@@ -125,7 +156,9 @@ def create_ballzy_ad(image_urls, price_text, product_id, price_color):
 # --- 3. XML FEED PROCESSING LOGIC ---
 
 def generate_meta_feed(processed_products):
-    """Creates the final XML feed using the generated image URLs."""
+    # 🟢 NEW: Dynamic Filename
+    META_FEED_FILENAME = f"ballzy_{country_code.lower()}_ad_feed.xml"
+    
     print(f"\nCreating final Meta Feed: {META_FEED_FILENAME}")
     
     # 1. Setup Root and Channel
@@ -163,8 +196,10 @@ def generate_meta_feed(processed_products):
     print(f"Feed saved successfully: {META_FEED_FILENAME}")
 
 def generate_tiktok_feed(processed_products):
-    """Creates the final TikTok XML feed using the generated image URLs and required fields."""
-    print(f"\nCreating TikTok XML Feed: {TIKTOK_FEED_FILENAME}")
+     # 🟢 NEW: Dynamic Filename
+    TIKTOK_FEED_FILENAME = f"ballzy_tiktok_{country_code.lower()}_ad_feed.xml"
+    
+    print(f"\nCreating final Meta Feed: {TIKTOK_FEED_FILENAME}")
     
     # 1. Setup Root and Channel
     ET.register_namespace('', 'http://www.w3.org/2005/Atom')
@@ -230,8 +265,10 @@ def generate_tiktok_feed(processed_products):
     print(f"Feed saved successfully: {TIKTOK_FEED_FILENAME}")
 
 def generate_google_feed(processed_products):
-    """Creates the final Google Merchant Center CSV feed."""
-    print(f"\nCreating Google CSV Feed: {GOOGLE_FEED_FILENAME}")
+     # 🟢 NEW: Dynamic Filename
+    GOOGLE_FEED_FILENAME = f"ballzy_{country_code.lower()}_google_feed.csv"
+    
+    print(f"\nCreating final Meta Feed: {GOOGLE_FEED_FILENAME}")
 
     # Define the required Google Headers
     HEADERS = [
@@ -294,124 +331,45 @@ def generate_google_feed(processed_products):
             
     print(f"CSV Feed saved successfully: {GOOGLE_FEED_FILENAME}")
 
-def process_feed(url):
-    """Downloads the XML feed, filters products, generates images, and stores data."""
+def process_single_feed(country_code, config):
+    """Downloads, processes, and generates all required feeds for a single country."""
+    url = config['feed_url']
     
-    print(f"Downloading feed from: {url}")
+    # ... (Rest of the old process_feed logic goes here, 
+    #      but use 'url' instead of 'FEED_URL' and 'country_code' in the outputs) ...
+    
+    print(f"Downloading feed for {country_code} from: {url}")
     try:
         feed_response = requests.get(url, timeout=30)
         feed_response.raise_for_status()
     except requests.exceptions.RequestException as e:
-        print(f"FATAL ERROR: Could not download feed. {e}")
+        print(f"FATAL ERROR: Could not download feed for {country_code}. {e}")
         return
 
-    try:
-        root = ET.fromstring(feed_response.content)
-    except ET.ParseError as e:
-        print(f"FATAL ERROR: Could not parse XML feed. {e}")
-        return
-
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    product_count = 0
-    products_for_feed = []
-
-    for item in root.iter('item'): 
-        if product_count >= MAX_PRODUCTS_TO_GENERATE:
-            break
-            
-        product_id_element = item.find('g:id', NAMESPACES)
-        if product_id_element is None: continue
-        product_id = product_id_element.text.strip()
-        
-        # --- PRODUCT FILTERING LOGIC ---
-        category_element = item.find('g:google_product_category', NAMESPACES)
-        is_correct_category = False
-        if category_element is not None:
-            category_text = category_element.text.strip().lower()
-            if "street shoes" in category_text or "boots" in category_text:
-                is_correct_category = True
-        
-        label_element = item.find('custom_label_0', NAMESPACES)
-        is_lifestyle = False
-        if label_element is not None and label_element.text.strip() == "Lifestyle":
-            is_lifestyle = True
-            
-        if not is_correct_category or not is_lifestyle:
-            continue 
-            
-        # --- Price Extraction and Formatting ---
-        sale_price_element = item.find('g:sale_price', NAMESPACES)
-        price_element = item.find('g:price', NAMESPACES)
-
-        # Determine price to display and color
-        if sale_price_element is not None:
-            display_price_element = sale_price_element
-            final_price_color = SALE_PRICE_COLOR
-            price_state = "sale"
-        elif price_element is not None:
-            display_price_element = price_element
-            final_price_color = NORMAL_PRICE_COLOR
-            price_state = "normal"
-        else:
-            continue
-            
-        # Helper to extract and format a price element
-        def format_price(element):
-            if element is None: return ""
-            raw_price_str = element.text.split()[0]
-            try:
-                price_value = float(raw_price_str)
-                return f"{int(price_value)}€" if price_value == int(price_value) else f"{price_value:.2f}€"
-            except ValueError:
-                return raw_price_str.replace(" EUR", "€")
-
-        formatted_display_price = format_price(display_price_element)
-        
-        # --- Image Link Extraction ---
-        image_urls = []
-        main_image = item.find('g:image_link', NAMESPACES)
-        if main_image is not None:
-            image_urls.append(main_image.text.strip())
-
-        additional_images = item.findall('g:additional_image_link', NAMESPACES)
-        # Take up to 2 additional images
-        for i, img in enumerate(additional_images):
-            if i < 2: image_urls.append(img.text.strip())
-            
-        if not image_urls: continue # Skip if no images found
-        
-        # Store all elements as a dictionary for easy CSV mapping
-        item_elements = {}
-        for node in item:
-            # Normalize tag names for dictionary keys (remove namespace prefix)
-            tag_name = node.tag.split('}')[-1]
-            item_elements[tag_name] = node
-            
-            # 🟢 APPLY CLEANING directly to the node's text for XML/CSV
-            if tag_name in ['description', 'title', 'link']:
-                node.text = clean_text(node.text)
-
-
-        # Store all original nodes and critical data for the final feeds
-        products_for_feed.append({
-            'id': product_id,
-            'price_state': price_state, 
-            'formatted_price': format_price(price_element),
-            'formatted_sale_price': format_price(sale_price_element),
-            'item_elements': item_elements, # Dictionary of nodes for easy CSV lookup
-            'nodes': list(item) # List of original nodes for XML copy
-        })
-
-        # Generate Image (This call is now safe)
-        create_ballzy_ad(image_urls, formatted_display_price, product_id, final_price_color)
-        product_count += 1
-
-    # 🟢 FINAL STEP: Generate both Feeds
+    # ... (XML parsing and filtering logic remains the same) ...
+    
+    # --- Execute Feed Generation ---
     if products_for_feed:
-        generate_meta_feed(products_for_feed)
-        generate_google_feed(products_for_feed)
-        generate_tiktok_feed(products_for_feed)
+        # 1. Meta XML (Required for all)
+        generate_meta_feed(products_for_feed, country_code)
+        
+        # 2. Google CSV (Conditional)
+        if config['google_feed_required']:
+            generate_google_feed(products_for_feed, country_code)
+            
+        # 3. TikTok XML (Required for all)
+        generate_tiktok_feed(products_for_feed, country_code)
+
+def process_all_feeds(country_configs):
+    """Main entry point to iterate and process all configured countries."""
+    print("Starting Multi-Country Feed Generation...")
+    for code, config in country_configs.items():
+        process_single_feed(code, config)
+        print("-" * 50)
+    print("All Feeds Generated.")
+
+
 # --- 4. EXECUTION ---
 
 if __name__ == "__main__":
-    process_feed(FEED_URL)
+    process_all_feeds(COUNTRY_CONFIGS)
