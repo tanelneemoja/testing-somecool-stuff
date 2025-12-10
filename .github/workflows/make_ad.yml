@@ -44,10 +44,11 @@ jobs:
           # Add the output folder 
           git add generated_ads 
           
-          # Add the XML feed file
+          # Add the XML feed files
           git add ballzy_ad_feed.xml || true
+          git add ballzy_tiktok_feed.xml || true # 🟢 NEW: Add TikTok XML feed
           
-          # 🟢 NEW: Add the Google CSV feed file
+          # Add the CSV feed file
           git add ballzy_google_feed.csv || true
           
           # Commit only if there are changes
