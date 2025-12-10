@@ -41,16 +41,13 @@ jobs:
           git config --global user.name "GitHub Action Bot"
           git config --global user.email "actions@github.com"
           
-          # Add the output folder 
+          # Add the output folder (containing all images)
           git add generated_ads 
           
-          # Add the XML feed files
-          git add ballzy_ad_feed.xml || true
-          git add ballzy_tiktok_feed.xml || true # 🟢 NEW: Add TikTok XML feed
-          
-          # Add the CSV feed file
-          git add ballzy_google_feed.csv || true
+          # 🟢 NEW: Add all generated feed files (XML and CSV)
+          git add ballzy_*.xml || true
+          git add ballzy_*.csv || true
           
           # Commit only if there are changes
-          git commit -m "Automated ad generation and feed update" || echo "No new files to commit"
+          git commit -m "Automated multi-country feed generation and update" || echo "No new files to commit"
           git push
