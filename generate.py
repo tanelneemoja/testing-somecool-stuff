@@ -16,6 +16,7 @@ MAX_PRODUCTS_TO_GENERATE = 15 # SET TO 3 FOR FINAL TEST! Change this to a high n
 GITHUB_PAGES_BASE_URL = "https://tanelneemoja.github.io/testing-somecool-stuff/generated_ads" 
 META_FEED_FILENAME = "ballzy_ad_feed.xml"
 GOOGLE_FEED_FILENAME = "ballzy_google_feed.csv"
+TIKTOK_FEED_FILENAME = "ballzy_tiktok_feed.xml"
 # XML Namespaces (required for parsing Google Shopping/Meta Feed XML)
 NAMESPACES = {
     'g': 'http://base.google.com/ns/1.0'
@@ -160,6 +161,73 @@ def generate_meta_feed(processed_products):
     tree.write(META_FEED_FILENAME, encoding='utf-8', xml_declaration=True)
     
     print(f"Feed saved successfully: {META_FEED_FILENAME}")
+
+def generate_tiktok_feed(processed_products):
+    """Creates the final TikTok XML feed using the generated image URLs and required fields."""
+    print(f"\nCreating TikTok XML Feed: {TIKTOK_FEED_FILENAME}")
+    
+    # 1. Setup Root and Channel
+    ET.register_namespace('', 'http://www.w3.org/2005/Atom')
+    ET.register_namespace('g', 'http://base.google.com/ns/1.0')
+    rss = ET.Element('rss', version="2.0", attrib={'xmlns:g': NAMESPACES['g']}) # 💡 Note the namespace fix
+    channel = ET.SubElement(rss, 'channel')
+    
+    ET.SubElement(channel, 'title').text = "Ballzy Dynamic TikTok Feed"
+    ET.SubElement(channel, 'link').text = GITHUB_PAGES_BASE_URL
+
+    # Required TikTok fields
+    tiktok_required_tags = [
+        'id', 'title', 'description', 'availability', 'condition', 
+        'price', 'link', 'brand', 
+        'item_group_id', 'google_product_category', 'product_type',
+        'sale_price', 'sale_price_effective_date', 'color', 'gender', 'size'
+    ]
+    
+    # Custom Labels
+    tiktok_custom_labels = [f'custom_label_{i}' for i in range(5)]
+
+    for product_data in processed_products:
+        item = ET.SubElement(channel, 'item')
+        
+        # Helper to get the element from the stored dictionary
+        def get_element(tag_name):
+            return product_data['item_elements'].get(tag_name)
+
+        # 2. Add Required and Recommended Nodes
+        for tag_name in tiktok_required_tags + tiktok_custom_labels:
+            node = get_element(tag_name)
+            
+            # Check if the node exists and has text content
+            if node is not None and node.text and node.text.strip():
+                # Recreate the element to ensure clean XML structure
+                
+                # Check if it's a Google tag (g:) or a standard tag
+                prefix = 'g:' if tag_name in ['id', 'title', 'description', 'price', 'sale_price', 'link', 'image_link', 'brand'] or tag_name.startswith('custom_label') else ''
+                
+                # Use the clean text already applied in process_feed
+                clean_text_content = node.text 
+                
+                if prefix == 'g:':
+                    # Create g: tags with namespace
+                    ET.SubElement(item, '{' + NAMESPACES['g'] + '}' + tag_name).text = clean_text_content
+                else:
+                    # Create standard tags (e.g., availability, condition)
+                    ET.SubElement(item, tag_name).text = clean_text_content
+        
+        # 3. Add the NEW IMAGE LINK (Required)
+        new_image_link = f"{GITHUB_PAGES_BASE_URL}/ad_{product_data['id']}.jpg"
+        ET.SubElement(item, '{' + NAMESPACES['g'] + '}' + 'image_link').text = new_image_link
+
+        # 4. Add additional image links (Optional but useful)
+        additional_images = product_data['item_elements'].get('additional_image_link')
+        if additional_images is not None and additional_images.text:
+             ET.SubElement(item, '{' + NAMESPACES['g'] + '}' + 'additional_image_link').text = additional_images.text
+
+    # 5. Save the resulting XML tree to a file
+    tree = ET.ElementTree(rss)
+    tree.write(TIKTOK_FEED_FILENAME, encoding='utf-8', xml_declaration=True)
+    
+    print(f"Feed saved successfully: {TIKTOK_FEED_FILENAME}")
 
 def generate_google_feed(processed_products):
     """Creates the final Google Merchant Center CSV feed."""
@@ -342,6 +410,7 @@ def process_feed(url):
     if products_for_feed:
         generate_meta_feed(products_for_feed)
         generate_google_feed(products_for_feed)
+        generate_tiktok_feed(products_for_feed)
 # --- 4. EXECUTION ---
 
 if __name__ == "__main__":
