@@ -335,8 +335,9 @@ def process_single_feed(country_code, config):
     """Downloads, processes, and generates all required feeds for a single country."""
     url = config['feed_url']
     
-    # ... (Rest of the old process_feed logic goes here, 
-    #      but use 'url' instead of 'FEED_URL' and 'country_code' in the outputs) ...
+    # 🟢 FIX: Initialize variables at the start to prevent NameError
+    product_count = 0
+    products_for_feed = []
     
     print(f"Downloading feed for {country_code} from: {url}")
     try:
@@ -346,9 +347,108 @@ def process_single_feed(country_code, config):
         print(f"FATAL ERROR: Could not download feed for {country_code}. {e}")
         return
 
-    # ... (XML parsing and filtering logic remains the same) ...
+    try:
+        root = ET.fromstring(feed_response.content)
+    except ET.ParseError as e:
+        print(f"FATAL ERROR: Could not parse XML feed for {country_code}. {e}")
+        return
+
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
     
-    # --- Execute Feed Generation ---
+    for item in root.iter('item'): 
+        if product_count >= MAX_PRODUCTS_TO_GENERATE:
+            break
+            
+        product_id_element = item.find('g:id', NAMESPACES)
+        if product_id_element is None: continue
+        product_id = product_id_element.text.strip()
+        
+        # --- PRODUCT FILTERING LOGIC ---
+        category_element = item.find('g:google_product_category', NAMESPACES)
+        is_correct_category = False
+        if category_element is not None:
+            category_text = category_element.text.strip().lower()
+            if "street shoes" in category_text or "boots" in category_text:
+                is_correct_category = True
+        
+        label_element = item.find('custom_label_0', NAMESPACES)
+        is_lifestyle = False
+        if label_element is not None and label_element.text.strip() == "Lifestyle":
+            is_lifestyle = True
+            
+        if not is_correct_category or not is_lifestyle:
+            continue 
+            
+        # --- Price Extraction and Formatting ---
+        sale_price_element = item.find('g:sale_price', NAMESPACES)
+        price_element = item.find('g:price', NAMESPACES)
+
+        # Determine price to display and color
+        if sale_price_element is not None:
+            display_price_element = sale_price_element
+            final_price_color = SALE_PRICE_COLOR
+            price_state = "sale"
+        elif price_element is not None:
+            display_price_element = price_element
+            final_price_color = NORMAL_PRICE_COLOR
+            price_state = "normal"
+        else:
+            continue
+            
+        # Helper to extract and format a price element
+        def format_price(element):
+            if element is None: return ""
+            raw_price_str = element.text.split()[0]
+            try:
+                price_value = float(raw_price_str)
+                # Use the country's currency from the config (although currently hardcoded to EUR)
+                currency_symbol = config['currency'].replace("EUR", "€") 
+                return f"{int(price_value)}{currency_symbol}" if price_value == int(price_value) else f"{price_value:.2f}{currency_symbol}"
+            except ValueError:
+                return raw_price_str.replace(" EUR", "€") # Fallback
+
+        formatted_display_price = format_price(display_price_element)
+        
+        # --- Image Link Extraction ---
+        image_urls = []
+        main_image = item.find('g:image_link', NAMESPACES)
+        if main_image is not None:
+            image_urls.append(main_image.text.strip())
+
+        additional_images = item.findall('g:additional_image_link', NAMESPACES)
+        # Take up to 2 additional images
+        for i, img in enumerate(additional_images):
+            if i < 2: image_urls.append(img.text.strip())
+            
+        if not image_urls: continue # Skip if no images found
+        
+        # Store all elements as a dictionary for easy CSV mapping and clean up nodes
+        item_elements = {}
+        for node in item:
+            # Normalize tag names for dictionary keys (remove namespace prefix)
+            tag_name = node.tag.split('}')[-1]
+            item_elements[tag_name] = node
+            
+            # 🟢 APPLY CLEANING directly to the node's text for XML/CSV
+            if tag_name in ['description', 'title', 'link']:
+                node.text = clean_text(node.text)
+
+        # Store all original nodes and critical data for the final feeds
+        products_for_feed.append({
+            'id': product_id,
+            'price_state': price_state, 
+            'formatted_price': format_price(price_element),
+            'formatted_sale_price': format_price(sale_price_element),
+            'item_elements': item_elements, # Dictionary of nodes for easy CSV lookup
+            'nodes': list(item) # List of original nodes for XML copy (now cleaned)
+        })
+
+        # Generate Image 
+        image_urls_for_ad = image_urls[:3] # Ensure only max 3 are used by the ad template
+        create_ballzy_ad(image_urls_for_ad, formatted_display_price, product_id, final_price_color)
+        product_count += 1
+        
+    # --- Execute Feed Generation (using the country code) ---
     if products_for_feed:
         # 1. Meta XML (Required for all)
         generate_meta_feed(products_for_feed, country_code)
@@ -359,6 +459,9 @@ def process_single_feed(country_code, config):
             
         # 3. TikTok XML (Required for all)
         generate_tiktok_feed(products_for_feed, country_code)
+        
+    else:
+        print(f"No products matched filtering criteria for {country_code}. No feeds generated.")
 
 def process_all_feeds(country_configs):
     """Main entry point to iterate and process all configured countries."""
