@@ -162,10 +162,14 @@ def create_ballzy_ad(image_urls, price_text, product_id, price_color):
 
 # --- 3. CONTAMINATION REPORT LOGIC (FINALIZED) ---
 
+# --- 3. CONTAMINATION REPORT LOGIC (FINALIZED) ---
+
 def create_estonian_contamination_report(xml_path):
     """
     Reads the full LT feed XML file and generates a CSV report of all products
-    whose title or description contains Estonian-specific characters or words.
+    whose title or g:description contains Estonian-specific characters or words.
+    
+    The output includes ID, Title, Description, and Link (Final URL).
     The output file is GUARANTEED to be created with headers, even if empty.
     """
     if not os.path.exists(xml_path):
@@ -191,16 +195,18 @@ def create_estonian_contamination_report(xml_path):
     print(f"\n🔎 Starting full contamination check on {len(product_elements)} products in LT feed...")
 
     for item in product_elements:
-        # Check for g:id first, fallback to standard id if necessary
-        product_id_element = item.find('g:id', NS)
-        product_id = product_id_element.text if product_id_element is not None and product_id_element.text else 'N/A'
-        
-        title_node = item.find('title')
-        description_node = item.find('description')
-        
+        # Core identifiers and problem fields
+        product_id = item.find('g:id', NS).text if item.find('g:id', NS) is not None and item.find('g:id', NS).text else 'N/A'
+        title_node = item.find('g:title')
+        # 💡 FIX: Check g:description as specified by the user
+        description_node = item.find('g:description', NS) 
+        link_node = item.find('g:link')
+
         title_text = title_node.text.strip() if title_node is not None and title_node.text else ''
         description_text = description_node.text.strip() if description_node is not None and description_node.text else ''
+        link_text = link_node.text.strip() if link_node is not None and link_node.text else ''
         
+        # Check against both title and description text
         full_text = (title_text + ' ' + description_text).lower()
         
         # Check for any of the Estonian markers in the combined text
@@ -210,10 +216,24 @@ def create_estonian_contamination_report(xml_path):
             contaminated_products.append({
                 'ID': product_id,
                 'Title': title_text,
-                # Truncate and clean newlines for CSV readability
-                'Description_Snippet': description_text[:150].replace('\n', ' ') + '...' if len(description_text) > 150 else description_text.replace('\n', ' ')
+                'Description': description_text.replace('\n', ' '), # Clean up newlines for CSV readability
+                'Link': link_text
             })
 
+    # --- Write the Report CSV (GUARANTEED OUTPUT) ---
+    with open(REPORT_CSV_FILE, 'w', newline='', encoding='utf-8') as csvfile:
+        # 💡 UPDATED HEADERS: ID, Title, Description, Link
+        fieldnames = ['ID', 'Title', 'Description', 'Link']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        
+        if contaminated_products:
+            writer.writerows(contaminated_products)
+            print(f"⚠️ Successfully created contamination report: {REPORT_CSV_FILE} with {len(contaminated_products)} problematic products.")
+        else:
+            # File is created with only headers, satisfying the git commit requirement.
+            print(f"✅ Full report check completed. No highly contaminated products found. Report file created with headers only.")
     # --- Write the Report CSV (GUARANTEED OUTPUT) ---
     with open(REPORT_CSV_FILE, 'w', newline='', encoding='utf-8') as csvfile:
         fieldnames = ['ID', 'Title', 'Description_Snippet']
