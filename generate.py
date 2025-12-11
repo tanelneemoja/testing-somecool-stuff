@@ -221,9 +221,11 @@ def create_estonian_contamination_report(xml_path):
             })
 
     # --- Write the Report CSV (GUARANTEED OUTPUT) ---
-    with open(REPORT_CSV_FILE, 'w', newline='', encoding='utf-8') as csvfile:
-        # 💡 UPDATED HEADERS: ID, Title, Description, Link
-        fieldnames = ['ID', 'Title', 'Description', 'Link']
+  with open(REPORT_CSV_FILE, 'w', newline='', encoding='utf-8') as csvfile:
+        
+        # 🟢 FIX CHECK 1: Ensure fieldnames is correct and local
+        # These are the fields we are passing into the dictionary
+        fieldnames = ['ID', 'Title', 'Description', 'Link'] 
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
